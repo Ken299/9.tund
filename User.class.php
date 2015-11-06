@@ -72,16 +72,60 @@ class User {
 	
 	function loginUser($email, $password_hash){
 		
+		//teen objekti, et saata tagasi kas errori (id, message) või successi (message) 
+		$response = new StdClass();
+		//kas selline email on  olemas?
+		$stmt = $this->connection->prepare("SELECT email FROM user_sample WHERE email = ?");
+		$stmt->bind_param("s", $email);
+		$stmt->execute();
+		
+		//kas oli 1 rida andmeid
+		if(!$stmt->fetch()){
+		
+			// saadan tagasi errori
+			$error = new StdClass();
+			$error->id = 0;
+			$error->message = "Sellise e-postiga kasutajat ei ole!";
+			
+			//panen errori responsile külge
+			$response->error = $error;
+			
+			// pärast returni enam koodi edasi ei vaadata funktsioonis
+			return $response;
+		}	
+		$stmt->close();
+		
 		$stmt = $this->connection->prepare("SELECT id, email FROM user_sample WHERE email=? AND password=?");
 		$stmt->bind_param("ss", $email, $password_hash);
 		$stmt->bind_result($id_from_db, $email_from_db);
 		$stmt->execute();
 		if($stmt->fetch()){
-			echo "kasutaja id=".$id_from_db;
+			// edukalt salvestas
+			$success = new StdClass();
+			$success->message = "Edukalt sisse logitud";
+			
+			$user = new StdClass();
+			$user->id = $id_from_db;
+			$user->email = $email_from_db;
+			
+			$success->user = $user;
+			
+			$response->success = $success;
+			
 		}else{
-			echo "Wrong password or email!";
+			// midagi läks katki
+			$error = new StdClass();
+			$error->id =1;
+			$error->message = "Vale parool!";
+			
+			//panen errori responsile külge
+			$response->error = $error;
 		}
+		
 		$stmt->close();
+		
+		//saada tagasi vastuse, kas success või error
+		return $response;
 	}
 	
 } ?>
